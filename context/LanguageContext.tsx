@@ -8,11 +8,12 @@ interface LanguageContextType {
   language: Language
   setLanguage: (lang: Language) => void
   t: (key: string) => string
+  isAmharic: boolean
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-const translations = {
+const translations: Record<Language, Record<string, string>> = {
   en: {
     'nav.home': 'Home',
     'nav.explore': 'Explore',
@@ -23,8 +24,14 @@ const translations = {
     'nav.login': 'Login',
     'nav.signup': 'Sign Up',
     'nav.logout': 'Logout',
+    'nav.search': 'Search stories...',
+    'nav.notifications': 'Notifications',
+    'nav.write': 'Write Story',
     'app.title': 'InkLink',
     'app.tagline': 'Where stories come to life',
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
+    'theme.system': 'System',
   },
   am: {
     'nav.home': 'ቤት',
@@ -36,8 +43,14 @@ const translations = {
     'nav.login': 'ግባ',
     'nav.signup': 'ተመዝገብ',
     'nav.logout': 'ውጣ',
+    'nav.search': 'ታሪክ ፈልግ...',
+    'nav.notifications': 'ማስታወቂያ',
+    'nav.write': 'ታሪክ ጻፍ',
     'app.title': 'InkLink',
     'app.tagline': 'ታሪክ አሌ',
+    'theme.light': 'ብርሃን',
+    'theme.dark': '암',
+    'theme.system': 'ስርዓት',
   },
 }
 
@@ -56,10 +69,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('language', lang)
+    document.documentElement.lang = lang
+    document.documentElement.dir = lang === 'am' ? 'rtl' : 'ltr'
   }
 
   const t = (key: string): string => {
-    return translations[language][key as keyof typeof translations['en']] || key
+    return translations[language][key] || key
   }
 
   if (!mounted) {
@@ -67,7 +82,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isAmharic: language === 'am' }}>
       {children}
     </LanguageContext.Provider>
   )
