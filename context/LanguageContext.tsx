@@ -59,16 +59,27 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem('language') as Language | null
-    if (saved && (saved === 'en' || saved === 'am')) {
-      setLanguageState(saved)
+    // Load saved language from localStorage
+    try {
+      const saved = localStorage.getItem('language') as Language | null
+      if (saved && (saved === 'en' || saved === 'am')) {
+        setLanguageState(saved)
+        document.documentElement.lang = saved
+        document.documentElement.dir = saved === 'am' ? 'rtl' : 'ltr'
+      }
+    } catch (error) {
+      console.error('Failed to load language preference:', error)
     }
     setMounted(true)
   }, [])
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
-    localStorage.setItem('language', lang)
+    try {
+      localStorage.setItem('language', lang)
+    } catch (error) {
+      console.error('Failed to save language preference:', error)
+    }
     document.documentElement.lang = lang
     document.documentElement.dir = lang === 'am' ? 'rtl' : 'ltr'
   }
@@ -77,10 +88,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return translations[language][key] || key
   }
 
-  if (!mounted) {
-    return <>{children}</>
-  }
-
+  // Always provide context, even before mount, to avoid context errors
   return (
     <LanguageContext.Provider value={{ language, setLanguage, t, isAmharic: language === 'am' }}>
       {children}

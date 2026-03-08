@@ -15,27 +15,32 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [isDark, setIsDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const saved = (localStorage.getItem('theme') as Theme) || 'system'
-    setThemeState(saved)
+    try {
+      const saved = (localStorage.getItem('theme') as Theme) || 'system'
+      setThemeState(saved)
 
-    const html = document.documentElement
-    if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-      html.classList.add('dark')
-      setIsDark(true)
-    } else {
-      html.classList.remove('dark')
-      setIsDark(false)
+      const html = document.documentElement
+      if (saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        html.classList.add('dark')
+        setIsDark(true)
+      } else {
+        html.classList.remove('dark')
+        setIsDark(false)
+      }
+    } catch (error) {
+      console.error('Failed to initialize theme:', error)
     }
-
-    setMounted(true)
   }, [])
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
+    try {
+      localStorage.setItem('theme', newTheme)
+    } catch (error) {
+      console.error('Failed to save theme preference:', error)
+    }
 
     const html = document.documentElement
     if (newTheme === 'dark' || (newTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -45,10 +50,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       html.classList.remove('dark')
       setIsDark(false)
     }
-  }
-
-  if (!mounted) {
-    return <>{children}</>
   }
 
   return <ThemeContext.Provider value={{ theme, setTheme, isDark }}>{children}</ThemeContext.Provider>
