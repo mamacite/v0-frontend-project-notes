@@ -55,10 +55,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return <ThemeContext.Provider value={{ theme, setTheme, isDark }}>{children}</ThemeContext.Provider>
 }
 
+// Default context to prevent hydration errors
+const defaultContext: ThemeContextType = {
+  theme: 'system',
+  setTheme: () => {},
+  isDark: false,
+}
+
 export function useTheme() {
   const context = useContext(ThemeContext)
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
-  }
-  return context
+  // Return default context if provider not found instead of throwing
+  return context || defaultContext
 }

@@ -51,7 +51,29 @@ export default function SignupPage() {
       })
       router.push('/login')
     } catch (err: any) {
-      setError(err.message || 'Failed to sign up')
+      let errorMessage = 'Failed to sign up'
+      
+      if (err.message?.includes('rate limit') || err.status === 429) {
+        errorMessage = isAmharic 
+          ? 'በጣም ብዙ ሙከራዎች። እባክዎ ውስጥ 15 ደቂቃዎች ይጠብቁ'
+          : 'Too many attempts. Please wait 15 minutes before trying again'
+      } else if (err.message?.includes('already registered') || err.message?.includes('User already exists')) {
+        errorMessage = isAmharic 
+          ? 'ኢሜይል ቀድሞ ተመዝግቦ ነው'
+          : 'Email is already registered'
+      } else if (err.message?.includes('invalid email')) {
+        errorMessage = isAmharic 
+          ? 'ቅጥነት ኢሜይል ያስገቡ'
+          : 'Please enter a valid email'
+      } else if (err.message?.includes('password')) {
+        errorMessage = isAmharic 
+          ? 'ስሌት ቢያንስ 6 ባህሪዎች አለበት'
+          : 'Password must be at least 6 characters'
+      } else {
+        errorMessage = err.message || 'Failed to sign up'
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
