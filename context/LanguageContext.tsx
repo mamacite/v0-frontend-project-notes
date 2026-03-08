@@ -96,10 +96,16 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Default context to prevent hydration errors
+const defaultContext: LanguageContextType = {
+  language: 'en',
+  setLanguage: () => {},
+  t: (key: string) => key,
+  isAmharic: false,
+}
+
 export function useLanguage() {
   const context = useContext(LanguageContext)
-  if (context === undefined) {
-    throw new Error('useLanguage must be used within a LanguageProvider')
-  }
-  return context
+  // Return default context if provider not found instead of throwing
+  return context || defaultContext
 }

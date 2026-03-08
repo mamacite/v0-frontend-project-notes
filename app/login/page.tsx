@@ -26,7 +26,25 @@ export default function LoginPage() {
       await signIn({ email, password })
       router.push('/')
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in')
+      let errorMessage = 'Failed to sign in'
+      
+      if (err.message?.includes('rate limit') || err.status === 429) {
+        errorMessage = isAmharic 
+          ? 'በጣም ብዙ ሙከራዎች። እባክዎ ውስጥ 15 ደቂቃዎች ይጠብቁ'
+          : 'Too many attempts. Please wait 15 minutes before trying again'
+      } else if (err.message?.includes('Invalid login credentials') || err.message?.includes('invalid password')) {
+        errorMessage = isAmharic 
+          ? 'ኢሜይል ወይም ስሌት ስህተት'
+          : 'Invalid email or password'
+      } else if (err.message?.includes('Email not confirmed')) {
+        errorMessage = isAmharic 
+          ? 'ኢሜይል ምሉእ ወደሎም። ምሉእ ኢሜይል ደብቃ ይቀድሙ'
+          : 'Email not confirmed. Please check your email for confirmation link'
+      } else {
+        errorMessage = err.message || 'Failed to sign in'
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
