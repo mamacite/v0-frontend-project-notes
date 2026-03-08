@@ -1,16 +1,16 @@
 -- InkLink Database Schema
 -- Complete schema for the bilingual story platform
+-- Compatible with Supabase Authentication
 
 -- Enable necessary extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- USERS TABLE
-CREATE TABLE IF NOT EXISTS users (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+-- USER PROFILES TABLE (extends Supabase auth.users)
+CREATE TABLE IF NOT EXISTS public.user_profiles (
+  id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
   full_name TEXT,
   bio TEXT,
   avatar_url TEXT,
@@ -23,9 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- STORIES TABLE
-CREATE TABLE IF NOT EXISTS stories (
+CREATE TABLE IF NOT EXISTS public.stories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   title_en TEXT NOT NULL,
   title_am TEXT NOT NULL,
   description_en TEXT,
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS stories (
 );
 
 -- STORY CHAPTERS TABLE (for multi-chapter stories)
-CREATE TABLE IF NOT EXISTS story_chapters (
+CREATE TABLE IF NOT EXISTS public.story_chapters (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
   chapter_number INTEGER NOT NULL,
   title_en TEXT NOT NULL,
   title_am TEXT NOT NULL,
@@ -64,29 +64,29 @@ CREATE TABLE IF NOT EXISTS story_chapters (
 );
 
 -- LIKES TABLE
-CREATE TABLE IF NOT EXISTS likes (
+CREATE TABLE IF NOT EXISTS public.likes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, story_id)
 );
 
 -- BOOKMARKS TABLE
-CREATE TABLE IF NOT EXISTS bookmarks (
+CREATE TABLE IF NOT EXISTS public.bookmarks (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, story_id)
 );
 
 -- COMMENTS TABLE
-CREATE TABLE IF NOT EXISTS comments (
+CREATE TABLE IF NOT EXISTS public.comments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  parent_comment_id UUID REFERENCES comments(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  parent_comment_id UUID REFERENCES public.comments(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   is_approved BOOLEAN DEFAULT TRUE,
   likes_count INTEGER DEFAULT 0,
@@ -95,28 +95,28 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 
 -- COMMENT LIKES TABLE
-CREATE TABLE IF NOT EXISTS comment_likes (
+CREATE TABLE IF NOT EXISTS public.comment_likes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  comment_id UUID NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  comment_id UUID NOT NULL REFERENCES public.comments(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, comment_id)
 );
 
 -- READING HISTORY TABLE
-CREATE TABLE IF NOT EXISTS reading_history (
+CREATE TABLE IF NOT EXISTS public.reading_history (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
   last_read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   progress_percentage INTEGER DEFAULT 0,
   UNIQUE(user_id, story_id)
 );
 
 -- STORY SUMMARIES TABLE (AI generated summaries)
-CREATE TABLE IF NOT EXISTS story_summaries (
+CREATE TABLE IF NOT EXISTS public.story_summaries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  story_id UUID NOT NULL REFERENCES stories(id) ON DELETE CASCADE,
+  story_id UUID NOT NULL REFERENCES public.stories(id) ON DELETE CASCADE,
   summary_en TEXT NOT NULL,
   summary_am TEXT,
   generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -124,20 +124,20 @@ CREATE TABLE IF NOT EXISTS story_summaries (
 );
 
 -- MODERATION LOGS TABLE
-CREATE TABLE IF NOT EXISTS moderation_logs (
+CREATE TABLE IF NOT EXISTS public.moderation_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  admin_id UUID NOT NULL REFERENCES users(id),
-  story_id UUID REFERENCES stories(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  admin_id UUID NOT NULL REFERENCES public.user_profiles(id),
+  story_id UUID REFERENCES public.stories(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   action TEXT NOT NULL CHECK (action IN ('approved', 'rejected', 'flagged', 'banned_user', 'deleted_story')),
   reason TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- AUTHOR EARNINGS TABLE
-CREATE TABLE IF NOT EXISTS author_earnings (
+CREATE TABLE IF NOT EXISTS public.author_earnings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   month_year TEXT NOT NULL,
   total_reads INTEGER DEFAULT 0,
   total_earnings DECIMAL(10, 2) DEFAULT 0,
@@ -146,21 +146,21 @@ CREATE TABLE IF NOT EXISTS author_earnings (
 );
 
 -- AUTHOR FOLLOWERS TABLE
-CREATE TABLE IF NOT EXISTS author_followers (
+CREATE TABLE IF NOT EXISTS public.author_followers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  follower_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
+  author_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(follower_id, author_id)
 );
 
 -- NOTIFICATIONS TABLE
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.user_profiles(id) ON DELETE CASCADE,
   type TEXT NOT NULL CHECK (type IN ('like', 'comment', 'follow', 'system')),
-  related_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-  story_id UUID REFERENCES stories(id) ON DELETE SET NULL,
+  related_user_id UUID REFERENCES public.user_profiles(id) ON DELETE SET NULL,
+  story_id UUID REFERENCES public.stories(id) ON DELETE SET NULL,
   message_en TEXT NOT NULL,
   message_am TEXT,
   is_read BOOLEAN DEFAULT FALSE,
@@ -183,43 +183,4 @@ CREATE INDEX idx_author_followers_author_id ON author_followers(author_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 
--- Enable Row Level Security
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE stories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bookmarks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reading_history ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies for users table
-CREATE POLICY "Users can read public profile data" ON users
-  FOR SELECT USING (true);
-
-CREATE POLICY "Users can update their own profile" ON users
-  FOR UPDATE USING (auth.uid()::text = id::text);
-
--- RLS Policies for stories table
-CREATE POLICY "Anyone can view published stories" ON stories
-  FOR SELECT USING (status = 'published' OR author_id = auth.uid()::text::uuid);
-
-CREATE POLICY "Authors can update their own stories" ON stories
-  FOR UPDATE USING (author_id = auth.uid()::text::uuid);
-
--- RLS Policies for comments table
-CREATE POLICY "Anyone can read approved comments" ON comments
-  FOR SELECT USING (is_approved = true);
-
-CREATE POLICY "Users can create comments" ON comments
-  FOR INSERT WITH CHECK (user_id = auth.uid()::text::uuid);
-
--- RLS Policies for bookmarks table
-CREATE POLICY "Users can manage their own bookmarks" ON bookmarks
-  FOR ALL USING (user_id = auth.uid()::text::uuid);
-
--- RLS Policies for likes table
-CREATE POLICY "Users can manage their own likes" ON likes
-  FOR ALL USING (user_id = auth.uid()::text::uuid);
-
--- RLS Policies for reading_history table
-CREATE POLICY "Users can manage their own reading history" ON reading_history
-  FOR ALL USING (user_id = auth.uid()::text::uuid);
+-- RLS will be configured separately after auth is fully set up
